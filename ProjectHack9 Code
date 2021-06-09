@@ -1,0 +1,272 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# ## Importing Libraries
+
+# In[1]:
+
+
+import pandas as pd
+import numpy as np
+from csv import reader
+import markdown
+from bs4 import BeautifulSoup
+import re
+from csv import reader 
+
+
+# In[2]:
+
+
+pd.set_option('display.max_rows', 100)
+
+
+# ## Loading Data
+
+# In[3]:
+
+
+html = markdown.markdown(open("CHANGELOG.md").read())
+
+print(html)
+
+
+# In[4]:
+
+
+# Here we used an alternative method to get into Data
+open_file = open("CHANGELOG.md",encoding="utf8")
+read_file = reader(open_file)
+data = list(read_file)
+print(data)
+
+
+# In[5]:
+
+
+soup =  BeautifulSoup(html)
+time_committed = soup.select('h3')
+comments = soup.select('ul')
+soup_string = str(soup)
+
+df_raw = pd.DataFrame([time_committed,comments])
+df_raw
+
+
+
+
+# In[6]:
+
+
+df = df_raw.T # This transposed the dataset
+
+
+# In[7]:
+
+
+df.head(10)
+
+
+# In[8]:
+
+
+for element in df[0]:
+    print(element)
+
+
+# In[9]:
+
+
+df.info()
+
+
+# In[10]:
+
+
+df = df.astype(str)
+
+
+# In[11]:
+
+
+df
+
+
+# In[12]:
+
+
+df[0] = df[0].apply(lambda x: x[4:])
+df[0] = df[0].apply(lambda x: x.replace('</h3>', ''))
+
+
+# In[13]:
+
+
+df
+
+
+# In[14]:
+
+
+df1 = df.copy()
+
+
+# In[15]:
+
+
+df1
+
+
+# In[16]:
+
+
+df1[0] = df1[0].apply(lambda x: x.replace('-',':')) # There are some entries where hyphen is the delimiter. Lets replace them with semi-colon
+df1[2] = df1[0].apply(lambda x: x.split(':')[0])
+# We perfectly separated version number from date
+# Lets move on to dates column
+
+
+# In[17]:
+
+
+df1[0] = df1[0].apply(lambda x: x.split(':')[1])
+# Dates have been successfully extracted
+
+
+# In[18]:
+
+
+df1
+
+
+# In[19]:
+
+
+# In a date, we can see unwanted newline character that our data has inherited from its previous structure. Lets clean it 
+df1.iloc[3,0] = df1.iloc[3,0].replace('\\n', '')
+
+# Another date in line 40 is not in the right format, lets handle that too manually 
+df1.iloc[40,0] = ' October 10, 2017'
+
+
+# In[20]:
+
+
+# df1[0].tolist()
+# There are some whitespaces. Lets handle those
+
+
+# In[21]:
+
+
+df1[0] = df1[0].apply(lambda x: x.lstrip())
+
+
+# In[22]:
+
+
+# df1[0].tolist()
+# Corrected!
+
+
+# In[25]:
+
+
+# for i, value in df1.iterrows():
+#     if 'Bug' in value[1]:
+#         print(i,'bug')
+# for i, value in df1.iterrows():
+#     if 'Bug' in value[1]:
+#         print(i,'bug')
+        
+
+        
+
+
+# By running those for loops, we can see that each data point in column can be consisting of both strings i-e 'Enhancements' and 'Bugs'. It is obvious as the column is comprised of comments. 
+# However, the first word can be seen as the 'category' of that comment. It is safe to assume that the first word defines the category. So lets separate it
+
+# In[ ]:
+
+
+
+
+
+# In[29]:
+
+
+# Lets clean Col 1 and remove those characters
+df1[1] = df1[1].apply(lambda x: x[9:])
+
+
+# In[31]:
+
+
+# Separating the 
+df1[4] = df1[1].apply(lambda x: x.split(':')[0])
+
+
+# In[32]:
+
+
+df1
+
+
+# ### Lets rename and reorder the columns of our DataFrame
+
+# In[37]:
+
+
+df1.rename(columns = {0: 'Date', 1: 'Details', 2: 'Version', 4:'Category'}, inplace = True)
+
+
+# In[38]:
+
+
+df1
+
+
+# In[39]:
+
+
+df1 = df1[['Date', 'Version', 'Category', 'Details']] # Reording the columns
+df1
+
+
+# #### Converting Date into DataTime object
+
+# In[45]:
+
+
+df1['Date'] = pd.to_datetime(df1['Date'], infer_datetime_format=True)
+
+
+# In[46]:
+
+
+df1
+
+
+# In[47]:
+
+
+df1['Category'].value_counts() # Some whitespaces in column 'Category'
+
+
+# In[49]:
+
+
+df1['Category'] = df1['Category'].str.strip() # Get rid of whitespace
+
+
+# In[50]:
+
+
+df1['Category'].value_counts()
+
+
+# In[ ]:
+
+
+
+
